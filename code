@@ -1,0 +1,32 @@
+import snscrape.modules.twitter as sntwitter
+import pandas as pd
+import gspread
+from gspread_dataframe import set_with_dataframe
+
+# setup google sheets
+gc = gspread.service_account(filename='credentials.json')
+sh = gc.open_by_key('1kIi2V2u7BoaFx2cwV9HaNFBxxOnl-TtjTFjnNac8-nY')
+worksheet = sh.get_worksheet(0)
+
+# clear sheet of old data
+range_of_cells = worksheet.range('A1:H505')
+for cell in range_of_cells:
+    cell.value = ''
+worksheet.update_cells(range_of_cells) 
+
+# create list for twitter data
+tweets_list2 = []
+
+# scrape data and append to list 
+for i,tweet in enumerate(sntwitter.TwitterSearchScraper('gaming').get_items()):
+    if i>500:
+        break
+    tweets_list2.append([tweet.date, tweet.id, tweet.content, tweet.user.username, tweet.likeCount, tweet.replyCount, tweet.source, tweet.retweetCount])
+    
+# create pandas dataframe from the tweets list above
+tweets_df2 = pd.DataFrame(tweets_list2, columns=['Datetime', 'Tweet Id', 'Text', 'Username', 'Likescount', 'ReplyCount', 'Source', 'RetweetCount'])
+tweeter_df = tweets_df2.sort_values(by=['ReplyCount'], ascending=False)
+
+# upload dataframe to google sheet
+set_with_dataframe(worksheet, tweeter_df)
+print("Complete")
